@@ -1,0 +1,47 @@
+Copy the reverse_scaffold file into the script folder of your Rails app.
+
+Let's say you have a users table in your db with the following columns : id, pseudo, email, password
+
+A call to reverse_scaffold :
+
+ruby script/reverse_scaffold users user 
+
+Will execute : 
+
+ruby script/generate scaffold user --skip-migration id:integer pseudo:string email:string password:string
+
+
+
+Synopsis
+--------
+  The reverse_scaffold script executes a Rails scaffold based on an existing table.
+
+
+Usage
+-----
+  ruby script/reverse_scaffold table_name model_name
+
+
+Examples
+--------
+  ruby script/reverse_scaffold users user
+
+
+Options
+-------
+  -h, --help          Displays help message
+  -r, --rspec         Generates rspec_scaffold
+  -V, --verbose       Outputs the command but doesn't execute it
+  -v, --version
+
+
+Author
+------
+  Anthony Heukmes
+  http://2dconcept.com
+  http://github.com/ahe
+
+
+Copyright
+---------
+  Copyright (c) 2009 Anthony Heukmes. Licensed under the MIT License
