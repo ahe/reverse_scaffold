@@ -71,7 +71,7 @@ class_name = ARGV[1].camelize
 eval "class ::#{class_name} < ActiveRecord::Base; set_table_name '#{table_name}' end" 
 klass = eval "::#{class_name}" 
 
-reverse_scaffold = "ruby #{File.dirname(__FILE__)}/generate #{command_name} #{class_name.underscore} --skip-migration "
+reverse_scaffold = "rails generate #{command_name} #{class_name.underscore} --skip-migration "
 klass.columns.each do |col|
   reverse_scaffold << col.name + ":" + col.type.to_s + " "
 end
