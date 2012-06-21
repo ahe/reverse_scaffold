@@ -8,7 +8,7 @@ ruby script/reverse_scaffold users user
 
 Will execute : 
 
-ruby script/generate scaffold user --skip-migration id:integer pseudo:string email:string password:string
+ruby script/generate scaffold user id:integer pseudo:string email:string password:string
 
 
 
@@ -31,8 +31,9 @@ Options
 -------
   -h, --help          Displays help message
   -r, --rspec         Generates rspec_scaffold
-  -V, --verbose       Outputs the command but doesn't execute it
-  -v, --version
+  -V, --verbose       Outputs the commands being executed by reverse_scaffold
+  -v, --version       Display version information about this script
+  --primary-key name  Specify diffent Primary Key name than 'id'
 
 
 Author
@@ -41,7 +42,34 @@ Author
   http://2dconcept.com
   http://github.com/ahe
 
+Modified in 2012 by
+--------------------
+  Hisakazu Ishibashi 
+  - kazutron@gmail.com, 
+  - http://github.com/hisapy
+  - http://twitter.com/hisa_py
+
+Changes
+-------
+
+Basically, modified the script to support Rails 3.2.2 and added a few fixes and features:
+	1. Removed Rdoc/Usage because it is not supported on Rails 3.2.2
+	2. Fixed the --verbose option. When this option was passed to the program the scaffold was not being generated.
+  	3. Removed the id field from the list of fields to be generated
+  	4. Modified the way to add a path to $LOAD_PATH to require 'environment'
+   	5. Removed the --skip-migration option from the coded command.
+   	6. -- skip-migration option is now a program argument.
+   	7. Moved the require environment just when necessary to improve responsiveness when not performing the scaffold generation.
+   	8. Camelize and underscore are now user's responsability (actually the code that camelized and/or underscored was not working for me so I just removed it... sorry)
+
+TODO:
+-----
+   1. The table name created by the scaffold does not match the one specified in the table_name program arg. In some situations it would be good to specify a switch to indicate that the table name created in migrations file be the one entered by the user, and also, need to specify in model by set_table_name method.
+   2. The set_primary_key is not written in the model created by rails generate scaffold, which means you manually have to write it to make edit/show actions work.
+
 
 Copyright
 ---------
   Copyright (c) 2009 Anthony Heukmes. Licensed under the MIT License
+
+
