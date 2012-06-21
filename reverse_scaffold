@@ -1,13 +1,14 @@
 #!/usr/bin/env ruby
 
-# == Synopsis 
+# == Synopsis
 #   The reverse_scaffold script executes a Rails scaffold based on an existing table.
 #
 #
-# == Usage 
+# == Usage (Asuming this script is located under script directory)
+#
 #   ruby script/reverse_scaffold table_name model_name
 #
-# 
+#
 # == Examples
 #   ruby script/reverse_scaffold users user
 #
@@ -15,70 +16,134 @@
 # == Options
 #   -h, --help          Displays help message
 #   -r, --rspec         Generates rspec_scaffold
-#   -V, --verbose       Outputs the command but doesn't execute it
-#   -v, --version       
+#   -V, --verbose       Outputs the commands being executed by reverse_scaffold
+#   -v, --version       Display version information about this script
+#   --primary-key name  Specify diffent Primary Key name than 'id'
 #
 #
 # == Author
 #   Anthony Heukmes
 #   http://2dconcept.com
 #   http://github.com/ahe
-#
+
+# == Modified in 2012 by
+#   Hisakazu Ishibashi 
+#   - kazutron@gmail.com, 
+#   - http://github.com/hisapy 
 #
 # == Copyright
 #   Copyright (c) 2009 Anthony Heukmes. Licensed under the MIT License
+#
+# ==  Changes
+#   Basically, modified the script to support Rails 3.2.2 and added a few fixes and features:
+#   1) Removed Rdoc/Usage because it is not supported on Rails 3.2.2
+#   2) Fixed the --verbose option. When this option was passed to the program the scaffold was not being generated.
+#   3) Removed the id field from the list of fields to be generated
+#   3) Modified the way to add a path to $LOAD_PATH to require 'environment'
+#   4) Removed the --skip-migration option from the coded command.
+#   5) -- skip-migration option is now a program argument.
+#   6) Moved the require environment just when necessary to improve responsiveness when not performing the scaffold generation.
+#   7) Camelize and underscore are now user's responsability (actually the code that camelized and/or underscored was not working for me so I just removed it... sorry)
+#
+# == TODO:
+#   1) The table name created by the scaffold does not match the one specified in the table_name program arg. In some situations it would be good to specify a switch to indicate 
+# => that the table name created in migrations file be the one entered by the user, and also, need to specify in model by set_table_name method.
+#   2) The set_primary_key is not written in the model created by rails generate scaffold, which means you manually have to write it to make edit/show actions work.
 
-require 'rdoc/usage'
+
+$LOAD_PATH.unshift(File.dirname(__FILE__)+'/../config') unless $LOAD_PATH.include?(File.dirname(__FILE__)+'/../config')
+#require 'environment'
 require 'optparse'
-require File.dirname(__FILE__) + '/../config/environment'
+require 'optparse/time'
+require 'ostruct'
+require 'pp'
 
-def display_help
-  RDoc::usage
-  exit
-end
+class ReverseScaffold
 
-def display_version
-  puts "Rails ActiveRecord Reverse Scaffold version #{SCRIPT_VERSION}"
-  exit
-end
-
-def configure_table_name(class_name, table_name)
-  model = <<-CODE
-class #{class_name} < ActiveRecord::Base
-  set_table_name '#{table_name}'
-end
-  CODE
+  #
+  # Return a structure describing the options.
+  #
+  def parse(args = ARGV)
+    # The options specified on the command line will be collected in *options*.
+    # We set default values here.
+    options = OpenStruct.new
+    options.pk = 'id'
+    options.verbose = false
+    options.skip_migration = ''
+    options.command_name = 'scaffold'
     
-  File.open(File.dirname(__FILE__) + "/../app/models/#{class_name.underscore}.rb", 'w+') {|f| f.write(model) }
-end
+    opts = OptionParser.new do |opts|
+      opts.banner = "Usage: ruby reverse_scaffold table_name ModelName [options]"
+      opts.separator ""
+      opts.separator "Specific options:"
 
-SCRIPT_VERSION = 1.0
-command_name = 'scaffold'
-options = {}
+      # Specify diffent Primary Key name than 'id'.
+      opts.on("--primary-key name", "# Specify diffent Primary Key name than 'id'.") do |pk|
+        options.pk = pk
+      end
 
-OptionParser.new do |opts|
-  opts.on('-h', '--help') { display_help }
-  opts.on('-r', '--rspec') { command_name = 'rspec_scaffold' }
-  opts.on('-V', '--verbose') { options[:verbose] = true }
-  opts.on('-v', '--version') { display_version }  
-end.parse!
+      # Boolean switch for being verbose
+      opts.on("-V", "--verbose", "Run verbosely") do |v|
+        options.verbose = v
+      end
 
-display_help unless ARGV[0] && ARGV[1]
+      # switch for --skip-migration.
+      opts.on("-s", "--skip-migration", "The same as in 'rails generate scaffold'"){
+        options.skip_migration = '--skip-migration'
+      }
 
-table_name = ARGV[0]
-class_name = ARGV[1].camelize
+      # Generates RSpec scaffold 
+      opts.on('-r', '--rspec') { options.command_name = 'rspec_scaffold' }
+      opts.separator ""
+      opts.separator "Common options:"
 
-eval "class ::#{class_name} < ActiveRecord::Base; set_table_name '#{table_name}' end" 
-klass = eval "::#{class_name}" 
+      # No argument, shows at tail.  This will print an options summary.
+      # Try it and see!
+      opts.on_tail("-h", "--help", "Show this message") do
+        puts opts
+        exit
+      end
 
-reverse_scaffold = "ruby #{File.dirname(__FILE__)}/generate #{command_name} #{class_name.underscore} --skip-migration "
-klass.columns.each do |col|
-  reverse_scaffold << col.name + ":" + col.type.to_s + " "
-end
+      # Another typical switch to print the version.
+      opts.on_tail("--version", "Show version") do
+        puts 'reverse_scaffold for Ruby on Rails 3.2.2'
+        exit
+      end
+    end
+    if args.length == 0
+      puts opts
+      exit
+    end
+    opts.parse!(args) unless args.length == 0
+    
+    #Finally, the two args not evaluated by OptionParser will be table_name and class_name respectively
+    options.table_name = args[0]
+    options.class_name = args[1]
+    options
+  end  # parse()
 
-if options[:verbose]
-  puts reverse_scaffold
-else
-  system reverse_scaffold
-  configure_table_name(class_name, table_name) if ARGV[0].downcase != ARGV[1].underscore.pluralize
-end
+
+
+  #
+  # Generates the scaffold/rspec_scaffold by using the rails generate command and the table_name and model_name and options passed in opts
+  # and by getting information about the table/view columns through ActiveRecord
+  #
+  # View: parse() above
+  #
+  def generate(opts)
+    require 'environment' #Get information about the current environment
+    eval "class ::#{opts.class_name} < ActiveRecord::Base; set_table_name '#{opts.table_name}' end"
+    klass = eval "::#{opts.class_name}"
+    reverse_scaffold = "rails generate #{opts.command_name} #{opts.class_name} "
+    klass.columns.each do |col|
+      reverse_scaffold << col.name + ":" + col.type.to_s + " " unless col.name == opts.pk
+    end
+    puts 'Executing: '+reverse_scaffold unless !opts.verbose
+    system reverse_scaffold + opts.skip_migration
+  end # end generate()
+end  # class ReverseScaffold
+
+# This is called when script is executed
+rs = ReverseScaffold.new
+options = rs.parse
+rs.generate(options)
