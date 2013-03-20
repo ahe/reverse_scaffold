@@ -4,7 +4,7 @@ Let's say you have a users table in your db with the following columns : id, pse
 
 A call to reverse_scaffold :
 
-ruby script/reverse_scaffold users user 
+ruby script/reverse_scaffold users User 
 
 Will execute : 
 
